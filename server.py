@@ -13,19 +13,20 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 
 def receiver(conn, addr):
-    print(f"[NEW CONNECTION] {addr} connected.")
-    connected = True
+    with tracer.start_as_current_span(f"[NEW CONNECTION] {addr} connected."):
+        print(f"[NEW CONNECTION] {addr} connected.")
+        connected = True
 
-    while connected:
-        
-        msg_length = conn.recv(HEADER).decode(FORMAT)
-        if msg_length:
-            msg_length = int(msg_length)
-            msg = conn.recv(msg_length).decode(FORMAT)
-
+        while connected:
             
-            print(f"[{addr}] {msg}")
-            write_file(msg)
+            msg_length = conn.recv(HEADER).decode(FORMAT)
+            if msg_length:
+                msg_length = int(msg_length)
+                msg = conn.recv(msg_length).decode(FORMAT)
+                
+                print(f"[{addr}] {msg}")
+                with tracer.start_as_current_span(f"receiver receives a request from: [{addr}] "):
+                    write_file(msg)
 
     conn.close()
 
@@ -33,7 +34,7 @@ def receiver(conn, addr):
 def start():
     server.listen()
     print(f"[LISTENING] server is listening on {SERVER}...")
-    with tracer.start_as_current_span("Server"):
+    with tracer.start_as_current_span("server"):
         while True:
             with tracer.start_as_current_span(f"[ACTIVE CONNECTIONS] {threading.active_count()-1 }"):
                 conn, addr = server.accept()
